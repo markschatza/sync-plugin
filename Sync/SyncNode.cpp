@@ -29,6 +29,7 @@ SyncNode::SyncNode()
     : GenericProcessor("Sync Port")
     , m_addEvent(false)
     , m_chan(0)
+    , m_pulseDuration(2)
 {
     setProcessorType (PROCESSOR_TYPE_SOURCE);
 }
@@ -45,6 +46,16 @@ void SyncNode::createEventChannels()
     chan->setName("Sync TTL event");
     chan->setDescription("Sync signal from Sync plugin");
     chan->setIdentifier("internal.sync.ttl");
+
+    MetaDataDescriptor md = MetaDataDescriptor(MetaDataDescriptor::UINT16, 3, "Source Channel",
+            "Index at its source, Source processor ID and Sub Processor index of the channel that triggers this event", "source.channel.identifier.full");
+    MetaDataValue mv(md);
+    uint16 sourceInfo[3];
+    sourceInfo[0] = this->getIndex();
+    sourceInfo[1] = this->getNodeId();
+    sourceInfo[2] = this->getIndex();
+    mv.setValue(static_cast<const uint16*>(sourceInfo));
+    chan->addMetaData(md, mv);
     eventChannelArray.add(chan);
 }
 
@@ -54,10 +65,30 @@ AudioProcessorEditor* SyncNode::createEditor()
     return editor;
 }
 
-void SyncNode::syncEvent(int chan)
+void SyncNode::syncEvent()
+{
+    m_addEvent = true;
+}
+
+
+void SyncNode::setTtlDuration(int dur)
+{
+    m_pulseDuration = dur;
+}
+
+int SyncNode::getTtlDuration() const
+{
+    return m_pulseDuration;
+}
+
+void SyncNode::setOutputChan(int chan)
 {
     m_chan = chan;
-    m_addEvent = true;
+}
+
+int SyncNode::getOutputChan() const
+{
+    return m_chan;
 }
 
 void SyncNode::process(AudioSampleBuffer& )
@@ -68,11 +99,42 @@ void SyncNode::process(AudioSampleBuffer& )
     {
         uint8 ttlData = 1 << m_chan;
         const EventChannel* chan = getEventChannel(getEventChannelIndex(0, getNodeId()));
-        std::cout << chan->getDataSize() << std::endl;
 
+        // Send ON event
         TTLEventPtr event = TTLEvent::createTTLEvent(chan, timestamp, &ttlData, sizeof(uint8), m_chan);
         addEvent(chan, event, 0);
         m_addEvent = false;
         CoreServices::sendStatusMessage("Sent system sync event!");
+
+        int eventDurationSamp = static_cast<int>(ceil(m_pulseDuration / 1000.0f * getSampleRate()));
+        uint8 ttlDataOff = 0;
+        TTLEventPtr eventOff = TTLEvent::createTTLEvent(chan, timestamp + eventDurationSamp, &ttlDataOff, sizeof(uint8), m_chan);
+        addEvent(chan, eventOff, 0);
     }
 }
+
+void SyncNode::saveCustomParametersToXml(XmlElement *parentElement)
+{
+    XmlElement* mainNode = parentElement->createNewChildElement("SyncNode");
+
+    mainNode->setAttribute("output", m_chan);
+    mainNode->setAttribute("duration", m_pulseDuration);
+
+}
+
+void SyncNode::loadCustomParametersFromXml ()
+{
+    if (parametersAsXml != nullptr)
+    {
+        forEachXmlChildElement (*parametersAsXml, mainNode)
+        {
+            if (mainNode->hasTagName ("SyncNode"))
+            {
+                m_chan = mainNode->getIntAttribute("output");
+                m_pulseDuration = mainNode->getIntAttribute("duration");
+                editor->updateSettings();
+            }
+        }
+    }
+}
+

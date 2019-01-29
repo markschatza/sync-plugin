@@ -28,20 +28,25 @@
 #include <EditorHeaders.h>
 
 class SyncEditor : public GenericEditor,
-        public ComboBox::Listener
+        public ComboBox::Listener,
+        public Label::Listener
 {
 public:
     SyncEditor(GenericProcessor* parentNode, bool useDefaultParameterEditors);
     virtual ~SyncEditor();
 
     void buttonEvent(Button* button);
+    virtual void labelTextChanged (Label* labelThatHasChanged) override;
     void comboBoxChanged(ComboBox* c);
+    void updateSettings();
 
 private:
     // Listener Interface
     // Sync button
     ScopedPointer<UtilityButton> syncButton;
     ScopedPointer<ComboBox> syncChanSelector;
+    ScopedPointer<Label> durationLabel;
+    ScopedPointer<Label> durationEditLabel;
     int syncChan;
 
 };

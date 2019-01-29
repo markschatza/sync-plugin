@@ -43,7 +43,14 @@ public:
     AudioProcessorEditor* createEditor();
 
     void process(AudioSampleBuffer& buffer) override;
-    void syncEvent(int chan);
+    void syncEvent();
+    void setTtlDuration(int dur);
+    int getTtlDuration() const;
+    void setOutputChan(int chan);
+    int getOutputChan() const;
+
+    void saveCustomParametersToXml(XmlElement *parentElement);
+    void loadCustomParametersFromXml();
 
 protected:
     void createEventChannels() override;
@@ -52,6 +59,7 @@ private:
 
     bool m_addEvent;
     int m_chan;
+    int m_pulseDuration;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SyncNode);
 
