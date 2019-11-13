@@ -23,8 +23,6 @@
 
 #include "SyncEditor.h"
 #include "SyncNode.h"
-#include "../../AccessClass.h"
-#include "../../UI/EditorViewport.h"
 
 SyncEditor::SyncEditor(GenericProcessor* parentNode, bool useDefaultParameterEditors=true)
     : GenericEditor(parentNode, useDefaultParameterEditors)
